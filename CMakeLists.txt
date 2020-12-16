@@ -66,3 +66,5 @@ endif()
 
 add_subdirectory(user)
 add_subdirectory(rc_test)
+
+SET(CMAKE_CXX_FLAGS "-std=c++11 -O3")

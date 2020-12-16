@@ -9,7 +9,7 @@
 #ifndef PROJECT_HARDWAREBRIDGE_H
 #define PROJECT_HARDWAREBRIDGE_H
 
-#ifdef linux 
+#ifdef linux
 
 #define MAX_STACK_SIZE 16384  // 16KB  of stack
 #define TASK_PRIORITY 49      // linux priority, this is not the nice value
@@ -116,13 +116,23 @@ public:
   void initHardware();
   void run();
   void publishEcatLCM();
-  // todo imu?
+  /*
+  void runKVH();
+  void logKVH();
+  */
+  // todo imu? >> YES!
 
 private:
   VectorNavData _vectorNavData;
   lcm::LCM _ecatLCM;
   ecat_command_t ecatCmdLcm;
   ecat_data_t ecatDataLcm;
+  /*
+  std::thread _KVHThread;
+  KVHimu _KVHimu;
+  KVH_lcmt _KVHData;
+  bool _KVHInit = false;
+  */
   // nothing?
 };
 #endif // END of #ifdef linux

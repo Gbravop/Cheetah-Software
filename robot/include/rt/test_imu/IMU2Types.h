@@ -5,7 +5,7 @@
 #ifndef PROJECT_IMUTYPES_H
 #define PROJECT_IMUTYPES_H
 
-#include "cppTypes.h"
+#include "cpp2Types.h"
 
 /*!
  * Mini Cheetah's IMU
