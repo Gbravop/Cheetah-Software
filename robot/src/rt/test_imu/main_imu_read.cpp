@@ -11,7 +11,7 @@
 #include <math.h>
 #include <pthread.h>
 
-#include <endian.h>
+#include <machine/endian.h>
 #include <stdint.h>
 #include "config.h"
 #include "rt_imu.h"
