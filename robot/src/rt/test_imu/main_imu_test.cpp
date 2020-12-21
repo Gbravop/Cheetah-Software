@@ -1,3 +1,10 @@
+/**
+ * @file main_imu_test.cpp
+ * @brief Code to schedule and control the execution of two threads: 
+ * (1) Read and retrieve IMU data (Thread 1), 
+ * (2) Compute quaternions from IMU gyro and acceleration data (Thread 2).
+ * This code still needs to be integrated within HardwareBridge.cpp
+ */
 #include <iostream>
 
 #include <stdlib.h>
@@ -9,9 +16,9 @@
 #include <termios.h>
 #include <errno.h>
 #include <math.h>
-#include <pthread.h>
+// #include <pthread.h>
 
-#include <endian.h>
+#include <machine/endian.h>
 #include <stdint.h>
 #include "../../../include/rt/test_imu/rt_vector2nav.h"
 #include "../../../include/rt/test_imu/config.h"
@@ -21,14 +28,14 @@
 #include "../../../include/rt/test_imu/cpp2Types.h"
 #include <eigen3/Eigen/Dense>
 
-#include <thread>
-#include <mutex>
+#include <thread> // std::thread
+#include <mutex>  // std::mutex, std::unique_lock
 #include <condition_variable>
 
-using namespace std;
+// using namespace std;
 
-condition_variable _tcond1;
-condition_variable _tcond2;
+std::condition_variable _tcond1;
+std::condition_variable _tcond2;
 
 #define USE_KVH
 
@@ -74,7 +81,7 @@ void MahonyFilter(Quat<float>&quat, const Vec3<float>gyro, Vec3<float>&accel, Ve
 
 class Thread1{
 private:
-  mutex _lockprint;
+  std::mutex mtx;  // mutex for critical section
   bool isThreadAlive = true;
 
 public:
@@ -83,10 +90,11 @@ public:
 
   void StartProcessing()
   {
-    unique_lock<<mutex>> locker(_lockprint);
+    // critical section (exclusive access to std::cout signaled by lifetime of lck):
+    std::unique_lock<std::mutex> lck (mtx);
     init_serial();
-    _tcond1.wait(locker);
-    cout << "Thread1" << endl;
+    _tcond1.wait(lck);
+    std::cout << "Thread1" << std::endl;
     _tcond2.notify_one();
   }
   void operator()()
@@ -103,7 +111,7 @@ public:
 
 class Thread2{
 private:
-  std::mutex _lockprint;
+  std::mutex mtx;
   bool isThreadAlive = true;
 
 public:
@@ -111,12 +119,13 @@ public:
   Thread2(Thread2 &st){};
 
   void StartProcessing(){
-    unique_lock<<mutex>> locker(_lockprint);
-    int quatc = 0;
+    // critical section (exclusive access to std::cout signaled by lifetime of lck):
+    std::unique_lock<std::mutex> lck(mtx);
+    int quatc = 0; // Counter for quaternion computations - To be removed
     while (quatc<2) {
       float* imu_d;
       imu_d = get_imu_data();
-      cout << "IMU Data = "<< imu_d << endl;
+      std::cout << "IMU Data = "<< imu_d << std::endl;
       /******************************/
       #ifdef USE_KVH
         Vec3<float> accel(imu_d[3], imu_d[4], imu_d[5]);
@@ -137,11 +146,11 @@ public:
       
         std::cout<< "quaternion " << std::endl << quat << std::endl;
       #endif
-      cout << "counter_quat:"<< quatc << '\n';
+      std::cout << "counter_quat:"<< std::endl << quatc << std::endl;
       quatc++;
     }
-    _tcond2.wait(locker);
-    cout << "Thread2" << endl;
+    _tcond2.wait(lck);
+    std::cout << "Thread2" << std::endl;
     _tcond1.notify_one();
   }
 
@@ -161,12 +170,12 @@ int main()
 {
   Thread1 st1;
   Thread2 st2;
-  thread t1(st1);
-  thread t2(st2)
+  std::thread t1(st1);
+  std::thread t2(st2);
   _tcond1.notify_one();
   t1.detach();
   t2.detach();
-  Sleep(10);
+  sleep(10);
   st1.stopThread();
   st2.stopThread();
   return 0;

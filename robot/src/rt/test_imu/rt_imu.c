@@ -307,7 +307,7 @@ void serial_read()
     char buffer_check[4] = {0};
 
     int not_ready = 0;
-    int imuc = 0;
+    int imuc = 0; // Counter for imu reading - To be removed
     // while(1==1)
     while(imuc < 2)
     {
