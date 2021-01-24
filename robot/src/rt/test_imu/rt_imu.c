@@ -20,6 +20,11 @@
 
 #include "rt_imu.h"
 
+// Mutex ready to be locked:
+pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+// Declaration of thread condition variable:
+pthread_cond_t cond1 = PTHREAD_COND_INITIALIZER;
+
 //***********CRC**************//
 uint32_t crc_table[256];
 const uint8_t CRC_ORDER = 32;
@@ -401,11 +406,14 @@ void serial_read()
             if(computed_crc == crc_buffer)
             {
                 crc_matches++;
+                pthread_mutex_lock(&m); // Start of critical section
                 for(int i = 0; i < 6; i++)
                 {
                     //if we've matched, update the valid IMU data
                     imu_valid_data[i] = *((float*)&message_buffer[i + 1]);
                 }
+                // pthread_cond_wait(&cond1,&m);
+                pthread_mutex_unlock(&m); // End of critical section
                 if(status_buffer != 0x77)
                 {
                     not_ready++;
