@@ -1,7 +1,7 @@
 /**
  * @file main_imu_test.cpp
- * @brief Code to schedule and control the execution of two threads: 
- * (1) Read and retrieve IMU data (Thread 1), 
+ * @brief Code to schedule and control the execution of two threads:
+ * (1) Read and retrieve IMU data (Thread 1),
  * (2) Compute quaternions from IMU gyro and acceleration data (Thread 2).
  * This code still needs to be integrated within HardwareBridge.cpp
  */
@@ -17,7 +17,7 @@
 #include <errno.h>
 #include <math.h>
 
-#include <machine/endian.h>
+#include <endian.h>
 #include <stdint.h>
 #include "../../../include/rt/test_imu/rt_vector2nav.h"
 #include "../../../include/rt/test_imu/config.h"
@@ -33,7 +33,7 @@
 
 // using namespace std;
 
-static std::mutex dataMutex;
+static std::mutex dataMutex, initMutex;
 
 std::condition_variable _tcond1;
 std::condition_variable _tcond2;
@@ -82,17 +82,14 @@ void MahonyFilter(Quat<float>&quat, const Vec3<float>gyro, Vec3<float>&accel, Ve
 
 void runKVH()
 {
-    dataMutex.lock(); // Start of critical section
-    init_serial(); 
-    // A condition variable should be used here
-    // The condition variable should signal that the IMU data is available
-    // Unlock this thread once the critical section in rt_imu.c becomes unlocked 
-    dataMutex.unlock(); // End of critical section
+    // dataMutex.lock(); // Start of critical section
+    init_serial(&dataMutex, &initMutex);
+    // dataMutex.unlock(); // End of critical section
 };
 
 void processingKVH(){
     int quatc = 0; // Counter for quaternion computations - To be removed
-    while (quatc<2) {
+    while (quatc<10000) {
         float* imu_d;
         dataMutex.lock(); // Start of critical section
         imu_d = get_imu_data();
@@ -120,16 +117,20 @@ void processingKVH(){
         std::cout<< "quaternion " << std::endl << quat << std::endl;
         std::cout << "counter_quat:"<< std::endl << quatc << std::endl;
         quatc++;
+				usleep(1000);
     }
 };
 
 int main()
 {
     // Read IMU data
+		initMutex.lock();
     std::thread KVH_READ(runKVH);
     // Compute quaternions
+		initMutex.lock();
+		std::cout << "Starting Pro\n";
     std::thread KVH_COMPUTE(processingKVH);
-    
+
     KVH_READ.join();
     KVH_COMPUTE.join();
     return 0;

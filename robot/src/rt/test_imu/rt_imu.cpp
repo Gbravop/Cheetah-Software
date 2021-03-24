@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <math.h>
 #include <pthread.h>
+#include <mutex>
 
 #include <endian.h>
 #include <stdint.h>
@@ -20,10 +21,7 @@
 
 #include "../../../include/rt/test_imu/rt_imu.h"
 
-// Mutex ready to be locked:
-// pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
-// Declaration of thread condition variable:
-// pthread_cond_t cond1 = PTHREAD_COND_INITIALIZER;
+using namespace std;
 
 //***********CRC**************//
 uint32_t crc_table[256];
@@ -277,8 +275,9 @@ float imu_valid_data[6];
  *
  * This contains most of the serial decoding logic.
  */
-void serial_read()
+void serial_read(std::mutex *m1, std::mutex *initMutex)
 {
+  bool firstRun = true;
     char error_msg[100];
 #ifndef SIMULATOR
     crc_generate_table();
@@ -400,20 +399,33 @@ void serial_read()
 
             //compute checksum
             uint32_t computed_crc = crc_calc(crc_format, 32);
-            //printf("got crc: %x , expected: %x\n", crc_buffer, computed_crc);
+            // printf("got crc: %x , expected: %x\n", crc_buffer, computed_crc);
 
             //check match
             if(computed_crc == crc_buffer)
             {
                 crc_matches++;
-                pthread_mutex_lock(&m); // Start of critical section
+                // if  (!firstRun){
+                (*m1).lock(); // Start of critical section
+                // }
+                // printf("[IMU-Serial Init] IMU locked!  Starting critical section.\n");
                 for(int i = 0; i < 6; i++)
                 {
                     //if we've matched, update the valid IMU data
+                    // printf("index: %d\n",i);
                     imu_valid_data[i] = *((float*)&message_buffer[i + 1]);
+
                 }
-                // pthread_cond_wait(&cond1,&m);
-                pthread_mutex_unlock(&m); // End of critical section
+                // printf("[IMU-Data] Available! \n");
+                (*m1).unlock(); // End of critical section
+                // printf("First Run Flag is %s \n", firstRun ? "true" : "false");
+                if  (firstRun){
+                  firstRun = false;
+                  (*initMutex).unlock();
+                  printf("Init Mutex Unlocked\n");
+                }
+                // printf("[IMU-Serial Init] IMU unlocked!  End of critical section.\n");
+
                 if(status_buffer != 0x77)
                 {
                     not_ready++;
@@ -490,8 +502,8 @@ float get_imu_data_matlab(int index)
 /**
  * @brief Initialize serial for IMU
  */
-void init_serial(pthread_mutex_t *m)
+void init_serial(std::mutex *myM, std::mutex *initM)
 {
     printf("[IMU-Serial] Initializing IMU Serial connection\n");
-    serial_read(&m);
+    serial_read(myM, initM);
 }

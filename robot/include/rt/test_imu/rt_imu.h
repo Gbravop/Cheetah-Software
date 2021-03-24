@@ -2,9 +2,10 @@
  * @file rt_imu.h
  * @brief Hardware interface for serial IMU
  */
+#include <mutex>
 #ifndef _rt_serial
 #define _rt_serial
-void init_serial();
+void init_serial(std::mutex *myM, std::mutex *initM);
 int get_matches();
 int get_fails();
 float* get_imu_data();

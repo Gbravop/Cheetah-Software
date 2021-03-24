@@ -11,10 +11,10 @@
 #include <math.h>
 #include <pthread.h>
 
-#include <machine/endian.h>
+#include <endian.h>
 #include <stdint.h>
-#include "config.h"
-#include "rt_imu.h"
+#include "../../../include/rt/test_imu/config.h"
+#include "../../../include/rt/test_imu/rt_imu.h"
 
 using namespace std;
 
